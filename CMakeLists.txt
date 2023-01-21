@@ -1,68 +1,57 @@
+# Copyright (c) 2015-2023 The ViaDuck Project
+#
+# This file is part of SecureMemory.
+#
+# SecureMemory is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# SecureMemory is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with SecureMemory.  If not, see <http://www.gnu.org/licenses/>.
+#
+
 cmake_minimum_required(VERSION 3.8)
-project(SecureMemory)
+project(secure_memory)
 
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+# add own modules
+list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules)
 
-include(GenerateExportHeader)
+# user settable settings
+set(OPTION_SECURE_UNIQUE_PTR ON CACHE BOOL "Erase memory on unique ptr deletion")
 
-# User settable settings
-set(OPTION_SECURE_UNIQUEPTR ON CACHE BOOL "Erase memory on unique ptr deletion")
+# glob includes and sources
+file(GLOB_RECURSE SECURE_MEMORY_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
+file(GLOB_RECURSE SECURE_MEMORY_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h)
 
-# Glob includes and sources
-file(GLOB_RECURSE SECUREMEMORY_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
-file(GLOB_RECURSE SECUREMEMORY_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h)
+# set up library target
+add_library(secure_memory STATIC ${SECURE_MEMORY_SOURCES} ${SECURE_MEMORY_HEADERS})
 
-# Create the library
-add_library(SecureMemory SHARED ${SECUREMEMORY_SOURCES} ${SECUREMEMORY_HEADERS})
+# require and enable c++17 support, to support header compilation with c++17 we have to set an interface definition
+target_compile_features(secure_memory INTERFACE cxx_std_17)
 
-# Generate export header in the secure_memory include directory
-generate_export_header(SecureMemory
-    BASE_NAME SECUREMEMORY
-    EXPORT_MACRO_NAME SECUREMEMORY_API
-    EXPORT_FILE_NAME ${CMAKE_CURRENT_SOURCE_DIR}/include/secure_memory/securememory_export.h
-)
-
-# Add this near the top after project()
-if(WIN32)
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+# compile options
+target_compile_options(secure_memory PRIVATE -Wall -Wextra)
+if (OPTION_SECURE_UNIQUE_PTR)
+    target_compile_definitions(secure_memory PUBLIC SECURE_MEMORY_OPTION_SECURE_UNIQUE_PTR)
 endif()
 
-# Windows-specific settings
-if(WIN32)
-    target_compile_definitions(SecureMemory
-        PRIVATE SECUREMEMORY_EXPORTS
-        PUBLIC SECUREMEMORY_SHARED_LIBS)
-    target_link_libraries(SecureMemory PUBLIC ws2_32)
+# includes
+target_include_directories(secure_memory PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/
+        )
+
+if (WIN32)
+    target_link_libraries(secure_memory ws2_32)
 endif()
 
-if(MSVC)
-    target_compile_options(SecureMemory PRIVATE /W4)
-else()
-    target_compile_options(SecureMemory PRIVATE -Wall -Wextra)
-endif()
+# add test subdir
+add_subdirectory(test)
 
-if(OPTION_SECURE_UNIQUEPTR)
-    target_compile_definitions(SecureMemory PUBLIC SECUREMEMORY_OPTION_SECURE_UNIQUEPTR)
-endif()
 
-# Include directories
-target_include_directories(SecureMemory 
-    PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-)
 
-# Install rules
-install(TARGETS SecureMemory
-    RUNTIME DESTINATION bin
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
-)
-
-install(
-    DIRECTORY include/
-    DESTINATION include
-)
