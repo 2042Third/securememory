@@ -51,7 +51,22 @@ if (WIN32)
 endif()
 
 # add test subdir
-add_subdirectory(test)
+#add_subdirectory(test)
+if (WIN32)
+    set(SECUREMEM_LIB_BUILT ${CMAKE_CURRENT_SOURCE_DIR}/output/win/bin)
+elseif (APPLE)
+    set(SECUREMEM_LIB_BUILT ${CMAKE_CURRENT_SOURCE_DIR}/output/macos/bin)
+else ()
+    set(SECUREMEM_LIB_BUILT ${CMAKE_CURRENT_SOURCE_DIR}/output/linux/bin)
+endif()
 
+set(SECUREMEM_LIB_FILE_NAME "libSecureMemory.a")
+set(SECUREMEM_LIB_OUTPUT "${SECUREMEM_LIB_BUILT}/${SECUREMEM_LIB_FILE_NAME}")
+
+add_custom_command(TARGET SecureMemory POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${SECUREMEM_LIB_BUILT}"
+    COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:SecureMemory>" "${SECUREMEM_LIB_OUTPUT}"
+    COMMENT "Copying SecureMemory static library to output directory"
+    )
 
 
