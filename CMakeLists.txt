@@ -18,7 +18,7 @@
 
 cmake_minimum_required(VERSION 3.8)
 project(SecureMemory)
-
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 # add own modules
 list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules)
 
