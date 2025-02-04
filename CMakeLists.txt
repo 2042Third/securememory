@@ -19,6 +19,7 @@
 cmake_minimum_required(VERSION 3.8)
 project(SecureMemory)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
+
 # add own modules
 list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules)
 
@@ -30,7 +31,10 @@ file(GLOB_RECURSE SECUREMEMORY_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 file(GLOB_RECURSE SECUREMEMORY_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h)
 
 # set up library target
-add_library(SecureMemory STATIC ${SECUREMEMORY_SOURCES} ${SECUREMEMORY_HEADERS})
+# Changed to SHARED library ------------------------------------
+add_library(SecureMemory SHARED ${SECUREMEMORY_SOURCES} ${SECUREMEMORY_HEADERS})
+# --------------------------------------------------------------
+
 
 # require and enable c++17 support, to support header compilation with c++17 we have to set an interface definition
 target_compile_features(SecureMemory INTERFACE cxx_std_17)
@@ -60,13 +64,21 @@ else ()
     set(SECUREMEM_LIB_BUILT ${CMAKE_CURRENT_SOURCE_DIR}/output/linux/bin)
 endif()
 
-set(SECUREMEM_LIB_FILE_NAME "libSecureMemory.a")
-set(SECUREMEM_LIB_OUTPUT "${SECUREMEM_LIB_BUILT}/${SECUREMEM_LIB_FILE_NAME}")
+#set(SECUREMEM_LIB_FILE_NAME "libSecureMemory.a")
+#set(SECUREMEM_LIB_OUTPUT "${SECUREMEM_LIB_BUILT}/${SECUREMEM_LIB_FILE_NAME}")
+#
+#add_custom_command(TARGET SecureMemory POST_BUILD
+#    COMMAND ${CMAKE_COMMAND} -E make_directory "${SECUREMEM_LIB_BUILT}"
+#    COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:SecureMemory>" "${SECUREMEM_LIB_OUTPUT}"
+#    COMMENT "Copying SecureMemory static library to output directory"
+#    )
 
-add_custom_command(TARGET SecureMemory POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${SECUREMEM_LIB_BUILT}"
-    COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:SecureMemory>" "${SECUREMEM_LIB_OUTPUT}"
-    COMMENT "Copying SecureMemory static library to output directory"
-    )
+# Remove custom copy command and replace with proper installation
+install(TARGETS SecureMemory
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+    PUBLIC_HEADER DESTINATION include/SecureMemory
+)
 
-
+install(DIRECTORY include/ DESTINATION include/SecureMemory)
