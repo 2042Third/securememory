@@ -1,84 +1,68 @@
-# Copyright (c) 2015-2021 The ViaDuck Project
-#
-# This file is part of SecureMemory.
-#
-# SecureMemory is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# SecureMemory is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with SecureMemory.  If not, see <http://www.gnu.org/licenses/>.
-#
-
 cmake_minimum_required(VERSION 3.8)
 project(SecureMemory)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 
-# add own modules
-list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-# user settable settings
+include(GenerateExportHeader)
+
+# User settable settings
 set(OPTION_SECURE_UNIQUEPTR ON CACHE BOOL "Erase memory on unique ptr deletion")
 
-# glob includes and sources
+# Glob includes and sources
 file(GLOB_RECURSE SECUREMEMORY_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 file(GLOB_RECURSE SECUREMEMORY_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h)
 
-# set up library target
-# Changed to SHARED library ------------------------------------
+# Create the library
 add_library(SecureMemory SHARED ${SECUREMEMORY_SOURCES} ${SECUREMEMORY_HEADERS})
-# --------------------------------------------------------------
 
+# Generate export header in the secure_memory include directory
+generate_export_header(SecureMemory
+    BASE_NAME SECUREMEMORY
+    EXPORT_MACRO_NAME SECUREMEMORY_API
+    EXPORT_FILE_NAME ${CMAKE_CURRENT_SOURCE_DIR}/include/secure_memory/securememory_export.h
+)
 
-# require and enable c++17 support, to support header compilation with c++17 we have to set an interface definition
-target_compile_features(SecureMemory INTERFACE cxx_std_17)
+# Add this near the top after project()
+if(WIN32)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+endif()
 
-# compile options
-target_compile_options(SecureMemory PRIVATE -Wall -Wextra)
-if (OPTION_SECURE_UNIQUEPTR)
+# Windows-specific settings
+if(WIN32)
+    target_compile_definitions(SecureMemory
+        PRIVATE SECUREMEMORY_EXPORTS
+        PUBLIC SECUREMEMORY_SHARED_LIBS)
+    target_link_libraries(SecureMemory PUBLIC ws2_32)
+endif()
+
+if(MSVC)
+    target_compile_options(SecureMemory PRIVATE /W4)
+else()
+    target_compile_options(SecureMemory PRIVATE -Wall -Wextra)
+endif()
+
+if(OPTION_SECURE_UNIQUEPTR)
     target_compile_definitions(SecureMemory PUBLIC SECUREMEMORY_OPTION_SECURE_UNIQUEPTR)
 endif()
 
-# includes
-target_include_directories(SecureMemory PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/
-        )
-
-if (WIN32)
-    target_link_libraries(SecureMemory ws2_32)
-endif()
-
-# add test subdir
-#add_subdirectory(test)
-if (WIN32)
-    set(SECUREMEM_LIB_BUILT ${CMAKE_CURRENT_SOURCE_DIR}/output/win/bin)
-elseif (APPLE)
-    set(SECUREMEM_LIB_BUILT ${CMAKE_CURRENT_SOURCE_DIR}/output/macos/bin)
-else ()
-    set(SECUREMEM_LIB_BUILT ${CMAKE_CURRENT_SOURCE_DIR}/output/linux/bin)
-endif()
-
-#set(SECUREMEM_LIB_FILE_NAME "libSecureMemory.a")
-#set(SECUREMEM_LIB_OUTPUT "${SECUREMEM_LIB_BUILT}/${SECUREMEM_LIB_FILE_NAME}")
-#
-#add_custom_command(TARGET SecureMemory POST_BUILD
-#    COMMAND ${CMAKE_COMMAND} -E make_directory "${SECUREMEM_LIB_BUILT}"
-#    COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:SecureMemory>" "${SECUREMEM_LIB_OUTPUT}"
-#    COMMENT "Copying SecureMemory static library to output directory"
-#    )
-
-# Remove custom copy command and replace with proper installation
-install(TARGETS SecureMemory
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
-    RUNTIME DESTINATION bin
-    PUBLIC_HEADER DESTINATION include/SecureMemory
+# Include directories
+target_include_directories(SecureMemory 
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
 
-install(DIRECTORY include/ DESTINATION include/SecureMemory)
+# Install rules
+install(TARGETS SecureMemory
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+)
+
+install(
+    DIRECTORY include/
+    DESTINATION include
+)

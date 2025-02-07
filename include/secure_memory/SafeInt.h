@@ -29,6 +29,8 @@
     #define SM_NO_SANITIZE
 #endif
 
+#include <cstdint>
+
 template<typename T, typename = std::enable_if_t<std::is_integral<T>::value>>
 class SafeInt {
 public:
